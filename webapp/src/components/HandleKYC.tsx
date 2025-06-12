@@ -1,5 +1,8 @@
 import lighthouse from '@lighthouse-web3/sdk'
 
+import { LIT_NETWORK } from "@lit-protocol/constants";
+import { LitNodeClient } from '@lit-protocol/lit-node-client';
+
 function handleipfs() {
 
     const progressCallback = (progressData: { uploaded: number; total: number }) => {
@@ -18,6 +21,23 @@ function handleipfs() {
         );
         console.log("File Status:", output);
         console.log("Visit at https://gateway.lighthouse.storage/ipfs/" + output.data.Hash);
+
+        //connecting to LIT node:
+
+        const client = new LitNodeClient({
+            litNetwork: LIT_NETWORK.Datil,
+        });
+
+        await client.connect();
+
+        // Check readiness
+        await client.ready;
+
+        console.log("LIT client:", client)
+
+        console.log('✅ Connected to Lit network!');
+
+
     };
 
 
