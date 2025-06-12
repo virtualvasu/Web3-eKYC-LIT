@@ -2,8 +2,22 @@ import lighthouse from '@lighthouse-web3/sdk';
 import { LIT_NETWORK } from "@lit-protocol/constants";
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import * as LitJsSdk from "@lit-protocol/lit-node-client";
+import { ethers } from "ethers";
+import { createSiweMessageWithRecaps, generateAuthSig, LitAbility, LitAccessControlConditionResource } from "@lit-protocol/auth-helpers";
+import { WalletClient } from 'viem';
+import { useWalletClient } from 'wagmi';
 
-function handleipfs() {
+function HandleIpfs() {
+    const { data: walletClient } = useWalletClient(); // ✅ moved here
+
+    function useEthersSigner(): (() => Promise<ethers.JsonRpcSigner | undefined>) {
+        return async () => {
+            if (!walletClient) return undefined;
+
+            const provider = new ethers.BrowserProvider(walletClient.transport as any);
+            return await provider.getSigner();
+        };
+    }
 
     const progressCallback = (progressData: { uploaded: number; total: number }) => {
         const percentageDone = 100 - (progressData.total / progressData.uploaded);
@@ -22,8 +36,6 @@ function handleipfs() {
         console.log("File Status:", output);
         console.log("Visit at https://gateway.lighthouse.storage/ipfs/" + output.data.Hash);
 
-        //LIT class
-
         class Lit {
             litNodeClient: any;
             chain;
@@ -40,7 +52,6 @@ function handleipfs() {
             }
 
             async encrypt(message: string) {
-                // Encrypt the message
                 const { ciphertext, dataToEncryptHash } = await LitJsSdk.encryptString(
                     {
                         //@ts-ignore
@@ -50,7 +61,6 @@ function handleipfs() {
                     this.litNodeClient,
                 );
 
-                // Return the ciphertext and dataToEncryptHash
                 return {
                     ciphertext,
                     dataToEncryptHash,
@@ -59,10 +69,9 @@ function handleipfs() {
         }
 
         const chain = "sepolia";
-
         let myLit = new Lit(chain);
         await myLit.connect();
-        console.log("connected successfully")
+        console.log("connected successfully");
 
         const accessControlConditions = [
             {
@@ -73,27 +82,47 @@ function handleipfs() {
                 parameters: [":userAddress", "latest"],
                 returnValueTest: {
                     comparator: ">=",
-                    value: "1000000000000", // 0.000001 ETH
+                    value: "1000000000000",
                 },
             },
         ];
 
-        const { ciphertext, dataToEncryptHash } = await myLit.encrypt("hello there, there goes the test string")
+        const { ciphertext, dataToEncryptHash } = await myLit.encrypt("hello there, there goes the test string");
 
-        console.log("ciphertext",ciphertext)
-        console.log("dataToEncryptHash",dataToEncryptHash)
+        console.log("ciphertext", ciphertext);
+        console.log("dataToEncryptHash", dataToEncryptHash);
 
+        //this is my signer
+        const getSigner = useEthersSigner();
 
+        //handles getting signer from wallet connect
+        const handleAction = async () => {
+            const signer = await getSigner();
+            if (!signer) {
+                console.error("No signer found");
+                return;
+            }
 
+            const address = await signer.getAddress();
+            console.log("Connected address:", address);
+        };
 
+        handleAction();
 
-        // await myLit.litNodeClient.disconnect()
-        // console.log("disconnected scucessfully")
+        //preparing accounts resource string
 
+        const accsResourceString = await LitAccessControlConditionResource.generateResourceString(
+            //@ts-ignore
+            accessControlConditions,
+            dataToEncryptHash
+        );
+        console.log("accsResourceString: ",accsResourceString);
 
+        //generating session signatures:
+
+        
 
     };
-
 
     return (
         <div className="App">
@@ -105,8 +134,11 @@ function handleipfs() {
                 }}
             />
 
+            <button onClick={() => useEthersSigner()}>
+                Connect Wallet
+            </button>
         </div>
-    )
+    );
 }
 
-export default handleipfs
+export default HandleIpfs;
