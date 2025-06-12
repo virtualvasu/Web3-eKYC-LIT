@@ -46,7 +46,7 @@ function HandleIpfs() {
 
             async connect() {
                 this.litNodeClient = new LitJsSdk.LitNodeClient({
-                    litNetwork: "cayenne",
+                    litNetwork: "datil-dev",
                 });
                 await this.litNodeClient.connect();
             }
@@ -77,7 +77,7 @@ function HandleIpfs() {
             {
                 contractAddress: "",
                 standardContractType: "",
-                chain: "ethereum",
+                chain: "sepolia",
                 method: "eth_getBalance",
                 parameters: [":userAddress", "latest"],
                 returnValueTest: {
@@ -116,11 +116,74 @@ function HandleIpfs() {
             accessControlConditions,
             dataToEncryptHash
         );
-        console.log("accsResourceString: ",accsResourceString);
+        console.log("accsResourceString: ", accsResourceString);
 
         //generating session signatures:
 
-        
+        const litNodeClient = new LitJsSdk.LitNodeClient({
+            litNetwork: "datil-dev",
+        });
+        await litNodeClient.connect();
+
+        console.log(litNodeClient);
+
+        const sessionSigs = await litNodeClient.getSessionSigs({
+            chain: "sepolia",
+            expiration: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 24 hours
+            resourceAbilityRequests: [
+                {
+                    resource: new LitAccessControlConditionResource(accsResourceString),
+                    ability: LitAbility.AccessControlConditionDecryption,
+                },
+            ],
+            authNeededCallback: async ({ resourceAbilityRequests, expiration, uri }) => {
+                const getSigner = useEthersSigner();
+                const signer = await getSigner();
+                if (!signer) {
+                    throw new Error("No signer found");
+                }
+
+                const toSign = await createSiweMessageWithRecaps({
+                    //@ts-ignore
+                    uri,
+                    //@ts-ignore
+                    expiration,
+                    //@ts-ignore
+                    resources: resourceAbilityRequests,
+                    walletAddress: await signer.getAddress(),
+                    nonce: await litNodeClient.getLatestBlockhash(),
+                    litNodeClient,
+                });
+
+                return await generateAuthSig({
+                    signer,
+                    toSign,
+                });
+            },
+
+        });
+        console.log("sessionSigs",sessionSigs);
+
+        //decrypting the result
+
+        const decryptRes = await LitJsSdk.decryptToString(
+            {
+
+                //@ts-ignore
+              accessControlConditions,
+              ciphertext,
+              dataToEncryptHash,
+              sessionSigs,
+              chain: "sepolia",
+            },
+            litNodeClient
+          );
+      
+          console.log("decryptRes:", decryptRes);
+
+          await litNodeClient.disconnect()
+          console.log("disconnected")
+
 
     };
 
