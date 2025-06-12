@@ -1,7 +1,7 @@
-import lighthouse from '@lighthouse-web3/sdk'
-
+import lighthouse from '@lighthouse-web3/sdk';
 import { LIT_NETWORK } from "@lit-protocol/constants";
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
+import * as LitJsSdk from "@lit-protocol/lit-node-client";
 
 function handleipfs() {
 
@@ -22,20 +22,74 @@ function handleipfs() {
         console.log("File Status:", output);
         console.log("Visit at https://gateway.lighthouse.storage/ipfs/" + output.data.Hash);
 
-        //connecting to LIT node:
+        //LIT class
 
-        const client = new LitNodeClient({
-            litNetwork: LIT_NETWORK.Datil,
-        });
+        class Lit {
+            litNodeClient: any;
+            chain;
 
-        await client.connect();
+            constructor(chain: any) {
+                this.chain = chain;
+            }
 
-        // Check readiness
-        await client.ready;
+            async connect() {
+                this.litNodeClient = new LitJsSdk.LitNodeClient({
+                    litNetwork: "cayenne",
+                });
+                await this.litNodeClient.connect();
+            }
 
-        console.log("LIT client:", client)
+            async encrypt(message: string) {
+                // Encrypt the message
+                const { ciphertext, dataToEncryptHash } = await LitJsSdk.encryptString(
+                    {
+                        //@ts-ignore
+                        accessControlConditions,
+                        dataToEncrypt: message,
+                    },
+                    this.litNodeClient,
+                );
 
-        console.log('✅ Connected to Lit network!');
+                // Return the ciphertext and dataToEncryptHash
+                return {
+                    ciphertext,
+                    dataToEncryptHash,
+                };
+            }
+        }
+
+        const chain = "sepolia";
+
+        let myLit = new Lit(chain);
+        await myLit.connect();
+        console.log("connected successfully")
+
+        const accessControlConditions = [
+            {
+                contractAddress: "",
+                standardContractType: "",
+                chain: "ethereum",
+                method: "eth_getBalance",
+                parameters: [":userAddress", "latest"],
+                returnValueTest: {
+                    comparator: ">=",
+                    value: "1000000000000", // 0.000001 ETH
+                },
+            },
+        ];
+
+        const { ciphertext, dataToEncryptHash } = await myLit.encrypt("hello there, there goes the test string")
+
+        console.log("ciphertext",ciphertext)
+        console.log("dataToEncryptHash",dataToEncryptHash)
+
+
+
+
+
+        // await myLit.litNodeClient.disconnect()
+        // console.log("disconnected scucessfully")
+
 
 
     };

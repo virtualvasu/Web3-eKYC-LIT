@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@lighthouse-web3/sdk": "^0.4.0",
-    "@lit-protocol/constants": "^7.2.0",
-    "@lit-protocol/lit-node-client": "^7.2.0",
+    "@lit-protocol/constants": "^6.11.5",
+    "@lit-protocol/lit-node-client": "^6.11.5",
     "@rainbow-me/rainbowkit": "^2.2.6",
     "@tanstack/react-query": "^5.55.3",
     "react": "^19.1.0",
