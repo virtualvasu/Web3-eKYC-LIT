@@ -20,6 +20,8 @@ function HandleIpfs() {
     const [fileURI, setfileURI] = useState('');
     const [progress, setProgress] = useState(0);
 
+    const apiKey = import.meta.env.VITE_LIGHTHOUSE_API_KEY;
+
     const accessControlConditions = [
         {
             contractAddress: "",
@@ -57,7 +59,7 @@ function HandleIpfs() {
         try {
             const output = await lighthouse.upload(
                 [selectedFile],
-                "62443950.610b75b985a14baf8525bf147a0a4db7",
+                apiKey,
                 //@ts-ignore
                 undefined,
                 //@ts-ignore
